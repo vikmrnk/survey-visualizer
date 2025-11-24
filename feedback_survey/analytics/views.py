@@ -1,3 +1,7 @@
-from django.shortcuts import render
+from django.views.generic import TemplateView
 
-# Create your views here.
+from accounts.mixins import TeacherOrAdminRequiredMixin
+
+
+class AnalyticsOverviewView(TeacherOrAdminRequiredMixin, TemplateView):
+    template_name = 'analytics/overview.html'
