@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Feedback Survey{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+</head>
+<body>
+    <div class="app-shell">
+        <header class="navbar">
+            <nav class="navbar-container">
+                <a href="{% url 'home' %}" class="navbar-brand">Feedback Survey</a>
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        {% if user.role == 'teacher' or user.role == 'admin' %}
+                            <li><a href="{% url 'surveys:teacher-dashboard' %}" class="navbar-link">Панель</a></li>
+                            <li><a href="{% url 'surveys:manage-list' %}" class="navbar-link">Мої опитування</a></li>
+                        {% elif user.role == 'student' %}
+                            <li><a href="{% url 'surveys:student-survey-list' %}" class="navbar-link">Доступні опитування</a></li>
+                        {% endif %}
+                        <li class="navbar-user">
+                            <span class="navbar-user-info">Вітаємо, {{ user.get_full_name|default:user.username }} ({{ user.role }})</span>
+                            <form method="post" action="{% url 'accounts:logout' %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-secondary">Вийти</button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li><a href="{% url 'accounts:login' %}" class="btn btn-primary">Увійти</a></li>
+                        <li><a href="{% url 'accounts:register' %}" class="btn btn-secondary">Реєстрація</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </header>
+        
+        <main class="page">
+            <div class="container">
+                {% if messages %}
+                    <ul class="messages">
+                        {% for message in messages %}
+                            <li class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+</body>
+</html>

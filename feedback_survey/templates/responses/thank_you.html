@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Дякуємо!{% endblock %}
+{% block content %}
+<section class="page-section">
+    <div class="card" style="max-width: 600px; margin: 0 auto;">
+        <div class="card-header">
+            <h1>Дякуємо за проходження опитування!</h1>
+        </div>
+        <div class="card-body">
+            <p>Ваші відповіді на опитування <strong>"{{ survey.title }}"</strong> успішно збережено.</p>
+            <p>Ваша думка важлива для нас!</p>
+        </div>
+        <div class="card-footer">
+            <a href="{% url 'surveys:student-survey-list' %}" class="btn btn-primary">Повернутися до списку опитувань</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

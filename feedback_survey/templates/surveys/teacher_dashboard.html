@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Панель викладача{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Панель керування</h1>
+</div>
+
+<section class="page-section">
+    <div class="grid grid-3">
+        <div class="card">
+            <div class="card-header">
+                <h3>Всього опитувань</h3>
+            </div>
+            <div class="card-body">
+                <p style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--color-primary); margin: 0;">{{ survey_count }}</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3>Активні</h3>
+            </div>
+            <div class="card-body">
+                <p style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--color-success); margin: 0;">{{ active_count }}</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3>Швидкі дії</h3>
+            </div>
+            <div class="card-body">
+                <div class="flex" style="flex-direction: column; gap: var(--spacing-sm);">
+                    <a href="{% url 'surveys:create' %}" class="btn btn-primary">Створити опитування</a>
+                    <a href="{% url 'surveys:manage-list' %}" class="btn btn-secondary">Мої опитування</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="page-section">
+    <div class="card">
+        <div class="card-header">
+            <h2>Останні зміни</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Назва</th>
+                            <th>Статус</th>
+                            <th>Оновлено</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for survey in latest_surveys %}
+                            <tr>
+                                <td><strong>{{ survey.title }}</strong></td>
+                                <td><span class="question-type-badge">{{ survey.get_status_display }}</span></td>
+                                <td>{{ survey.updated_at|date:"d.m.Y H:i" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">Поки немає створених опитувань.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

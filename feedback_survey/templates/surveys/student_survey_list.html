@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Опитування{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Доступні опитування</h1>
+</div>
+
+<section class="page-section">
+    {% if surveys %}
+        <div class="grid grid-responsive">
+            {% for survey in surveys %}
+                <article class="card survey-card">
+                    <div class="card-header">
+                        <h3>{{ survey.title }}</h3>
+                    </div>
+                    <div class="card-body">
+                        {% if survey.description %}
+                            <p>{{ survey.description|truncatewords:20 }}</p>
+                        {% endif %}
+                        {% if survey.discipline %}
+                            <p><small><strong>Дисципліна:</strong> {{ survey.discipline }}</small></p>
+                        {% endif %}
+                        {% if survey.start_date or survey.end_date %}
+                            <p><small>
+                                {% if survey.start_date %}<strong>Початок:</strong> {{ survey.start_date|date:"d.m.Y H:i" }}{% endif %}
+                                {% if survey.end_date %} • <strong>Завершення:</strong> {{ survey.end_date|date:"d.m.Y H:i" }}{% endif %}
+                            </small></p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <a href="{% url 'responses:take-survey' survey_id=survey.pk %}" class="btn btn-primary">Пройти опитування</a>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="card-body">
+                <p class="text-center">Наразі немає доступних опитувань. Всі активні опитування вже пройдені або ще не розпочались.</p>
+            </div>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

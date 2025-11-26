@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}Редагування «{{ object.title }}»{% else %}Нове опитування{% endif %}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{% if object %}Редагувати опитування{% else %}Створити опитування{% endif %}</h1>
+</div>
+
+<section class="page-section">
+    <div class="card">
+        <div class="card-body">
+            <form method="post" class="form">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-error">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+                
+                <div class="grid grid-2">
+                    {% for field in form %}
+                        <div class="form-field">
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}{% if field.field.required %} <span style="color: var(--color-danger);">*</span>{% endif %}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <span class="form-help">{{ field.help_text }}</span>
+                            {% endif %}
+                            {% if field.errors %}
+                                {% for error in field.errors %}
+                                    <span class="form-error">{{ error }}</span>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="form-field">
+                    <div class="flex flex-gap">
+                        <button type="submit" name="action" value="draft" class="btn btn-secondary">Зберегти як чернетку</button>
+                        <button type="submit" name="action" value="publish" class="btn btn-primary">Опублікувати</button>
+                        <a href="{% url 'surveys:manage-list' %}" class="btn btn-secondary">Скасувати</a>
+                        {% if object %}
+                            <a href="{% url 'surveys:question-builder' object.pk %}" class="btn btn-primary">Конструктор питань</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

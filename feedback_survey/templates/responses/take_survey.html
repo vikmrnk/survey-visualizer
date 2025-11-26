@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}Проходження опитування: {{ survey.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{{ survey.title }}</h1>
+        {% if survey.description %}
+            <p class="subtitle">{{ survey.description }}</p>
+        {% endif %}
+        {% if survey.discipline %}
+            <p><small><strong>Дисципліна:</strong> {{ survey.discipline }}</small></p>
+        {% endif %}
+    </div>
+    <div class="page-header-actions">
+        <a href="{% url 'surveys:student-survey-list' %}" class="btn btn-secondary">← Назад до списку</a>
+    </div>
+</div>
+
+<section class="page-section">
+    <form method="post" class="form">
+        {% csrf_token %}
+        
+        {% if questions %}
+            <div class="survey-progress">
+                <div class="survey-progress-text">Питання: {{ questions|length }}</div>
+            </div>
+        {% endif %}
+        
+        {% for question in questions %}
+            <div class="question-card card">
+                <div class="card-body">
+                    <div class="question-header">
+                        <span class="question-number">{{ forloop.counter }}</span>
+                        <strong>{{ question.text }}</strong>
+                        <span class="question-type-badge">{{ question.get_question_type_display }}</span>
+                    </div>
+                    
+                    <div class="question-options">
+                        {% if question.question_type == 'single' %}
+                            {% for choice in question.choices.all %}
+                                <label class="form-radio-label">
+                                    <input 
+                                        type="radio" 
+                                        name="question_{{ question.pk }}" 
+                                        value="{{ choice.pk }}" 
+                                        id="choice_{{ choice.pk }}"
+                                        class="form-radio"
+                                        required
+                                    />
+                                    <span>{{ choice.text }}</span>
+                                </label>
+                            {% empty %}
+                                <p><em>Немає варіантів відповіді для цього питання.</em></p>
+                            {% endfor %}
+                        
+                        {% elif question.question_type == 'multiple' %}
+                            <p><small>Оберіть один або кілька варіантів:</small></p>
+                            {% for choice in question.choices.all %}
+                                <label class="form-checkbox-label">
+                                    <input 
+                                        type="checkbox" 
+                                        name="question_{{ question.pk }}" 
+                                        value="{{ choice.pk }}"
+                                        id="choice_{{ choice.pk }}"
+                                        class="form-checkbox"
+                                    />
+                                    <span>{{ choice.text }}</span>
+                                </label>
+                            {% empty %}
+                                <p><em>Немає варіантів відповіді для цього питання.</em></p>
+                            {% endfor %}
+                        
+                        {% elif question.question_type == 'scale' %}
+                            <label class="form-label">
+                                Оцінка (1-10):
+                                <div style="display: flex; align-items: center; gap: var(--spacing-md); margin-top: var(--spacing-sm);">
+                                    <input 
+                                        type="range" 
+                                        name="question_{{ question.pk }}" 
+                                        id="scale_{{ question.pk }}"
+                                        min="1" 
+                                        max="10" 
+                                        value="5" 
+                                        required
+                                        oninput="document.getElementById('output_{{ question.pk }}').textContent = this.value"
+                                        style="flex: 1;"
+                                    />
+                                    <output id="output_{{ question.pk }}" style="font-weight: 600; min-width: 30px; text-align: center;">5</output>
+                                </div>
+                            </label>
+                        
+                        {% elif question.question_type == 'text' %}
+                            <label for="text_{{ question.pk }}" class="form-label">Ваша відповідь:</label>
+                            <textarea 
+                                name="question_{{ question.pk }}" 
+                                id="text_{{ question.pk }}"
+                                rows="4" 
+                                class="form-textarea"
+                                required
+                                placeholder="Введіть вашу відповідь..."
+                            ></textarea>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="card">
+                <div class="card-body">
+                    <p class="text-center">У цьому опитуванні поки немає питань.</p>
+                </div>
+            </div>
+        {% endfor %}
+        
+        {% if questions %}
+            <div class="form-field mt-xl">
+                <div class="flex flex-gap">
+                    <button type="submit" class="btn btn-primary">Відправити відповіді</button>
+                    <a href="{% url 'surveys:student-survey-list' %}" class="btn btn-secondary">Скасувати</a>
+                </div>
+            </div>
+        {% endif %}
+    </form>
+</section>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}Мої опитування{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Мої опитування</h1>
+        <p class="subtitle">Керуйте створеними опитуваннями, використовуйте фільтри та переходьте до конструктора питань.</p>
+    </div>
+    <div class="page-header-actions">
+        <a href="{% url 'surveys:create' %}" class="btn btn-primary">+ Створити опитування</a>
+    </div>
+</div>
+
+<section class="page-section">
+    <div class="card">
+        <div class="card-header">
+            <h2>Фільтри</h2>
+        </div>
+        <div class="card-body">
+            <form method="get" class="form">
+                <div class="grid grid-2">
+                    <div class="form-field">
+                        <label for="{{ filter_form.status.id_for_label }}" class="form-label">{{ filter_form.status.label }}</label>
+                        {{ filter_form.status }}
+                        {% if filter_form.status.errors %}
+                            {% for error in filter_form.status.errors %}
+                                <span class="form-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="form-field">
+                        <label for="{{ filter_form.discipline.id_for_label }}" class="form-label">{{ filter_form.discipline.label }}</label>
+                        {{ filter_form.discipline }}
+                        {% if filter_form.discipline.errors %}
+                            {% for error in filter_form.discipline.errors %}
+                                <span class="form-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="form-field">
+                        <label for="{{ filter_form.start_date.id_for_label }}" class="form-label">{{ filter_form.start_date.label }}</label>
+                        {{ filter_form.start_date }}
+                        {% if filter_form.start_date.errors %}
+                            {% for error in filter_form.start_date.errors %}
+                                <span class="form-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="form-field">
+                        <label for="{{ filter_form.end_date.id_for_label }}" class="form-label">{{ filter_form.end_date.label }}</label>
+                        {{ filter_form.end_date }}
+                        {% if filter_form.end_date.errors %}
+                            {% for error in filter_form.end_date.errors %}
+                                <span class="form-error">{{ error }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="flex flex-gap">
+                    <button type="submit" class="btn btn-primary">Фільтрувати</button>
+                    <a href="{% url 'surveys:manage-list' %}" class="btn btn-secondary">Скинути</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<section class="page-section">
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Назва</th>
+                    <th>Дисципліна</th>
+                    <th>Період</th>
+                    <th>Статус</th>
+                    <th class="text-center">Дії</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for survey in surveys %}
+                    <tr>
+                        <td><strong>{{ survey.title }}</strong></td>
+                        <td>{{ survey.discipline|default:'—' }}</td>
+                        <td>
+                            {% if survey.start_date %}{{ survey.start_date|date:"d.m.Y H:i" }}{% else %}—{% endif %}
+                            {% if survey.start_date or survey.end_date %} – {% endif %}
+                            {% if survey.end_date %}{{ survey.end_date|date:"d.m.Y H:i" }}{% else %}—{% endif %}
+                        </td>
+                        <td>
+                            <span class="question-type-badge">{{ survey.get_status_display }}</span>
+                        </td>
+                        <td class="text-center">
+                            <div class="flex flex-gap" style="justify-content: center;">
+                                <a href="{% url 'surveys:edit' survey.pk %}" class="btn btn-secondary">Редагувати</a>
+                                <a href="{% url 'surveys:question-builder' survey.pk %}" class="btn btn-primary">Питання</a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">Поки що немає створених опитувань.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if is_paginated %}
+        <nav class="flex flex-center flex-gap mt-lg">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if filters_query %}&{{ filters_query|safe }}{% endif %}" class="btn btn-secondary">« Попередня</a>
+            {% endif %}
+            <span>Сторінка {{ page_obj.number }} з {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if filters_query %}&{{ filters_query|safe }}{% endif %}" class="btn btn-secondary">Наступна »</a>
+            {% endif %}
+        </nav>
+    {% endif %}
+</section>
+{% endblock %}

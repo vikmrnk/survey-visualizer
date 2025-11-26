@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block title %}Питання «{{ survey.title }}»{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Конструктор питань: {{ survey.title }}</h1>
+        <p class="subtitle">Додайте питання, оберіть тип відповіді та впорядкуйте їх. Для типів «Single» та «Multiple» не забудьте додати варіанти.</p>
+    </div>
+    <div class="page-header-actions">
+        <a href="{% url 'surveys:manage-list' %}" class="btn btn-secondary">← Назад до списку</a>
+    </div>
+</div>
+
+<section class="page-section">
+    <form method="post" class="form">
+        {% csrf_token %}
+        {{ question_formset.management_form }}
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Питання</h2>
+            </div>
+            <div class="card-body">
+                {% for form in question_formset.forms %}
+                    <div class="question-card card" style="margin-bottom: var(--spacing-lg);">
+                        <div class="card-body">
+                            {% for hidden in form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                            
+                            <div class="grid grid-2">
+                                <div class="form-field">
+                                    <label for="{{ form.text.id_for_label }}" class="form-label">{{ form.text.label }}</label>
+                                    {{ form.text }}
+                                    {% if form.text.errors %}
+                                        {% for error in form.text.errors %}
+                                            <span class="form-error">{{ error }}</span>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <div class="form-field">
+                                    <label for="{{ form.question_type.id_for_label }}" class="form-label">{{ form.question_type.label }}</label>
+                                    {{ form.question_type }}
+                                    {% if form.question_type.errors %}
+                                        {% for error in form.question_type.errors %}
+                                            <span class="form-error">{{ error }}</span>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <div class="form-field">
+                                    <label for="{{ form.order.id_for_label }}" class="form-label">{{ form.order.label }}</label>
+                                    {{ form.order }}
+                                    {% if form.order.errors %}
+                                        {% for error in form.order.errors %}
+                                            <span class="form-error">{{ error }}</span>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                {% if question_formset.can_delete %}
+                                    <div class="form-field">
+                                        <label class="form-checkbox-label">
+                                            {{ form.DELETE }}
+                                            <span>Видалити це питання</span>
+                                        </label>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% for question, formset in choice_formsets %}
+            <div class="card" style="margin-top: var(--spacing-xl);">
+                <div class="card-header">
+                    <h3>Варіанти для: {{ question.text|truncatechars:80 }}</h3>
+                </div>
+                <div class="card-body">
+                    {% if question.question_type != 'single' and question.question_type != 'multiple' %}
+                        <p><small>Для цього типу питання варіанти не потрібні.</small></p>
+                    {% else %}
+                        {{ formset.management_form }}
+                        {% for form in formset.forms %}
+                            <div class="question-card" style="margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--color-gray-200);">
+                                {% for hidden in form.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                                <div class="grid grid-2">
+                                    <div class="form-field">
+                                        <label for="{{ form.text.id_for_label }}" class="form-label">{{ form.text.label }}</label>
+                                        {{ form.text }}
+                                        {% if form.text.errors %}
+                                            {% for error in form.text.errors %}
+                                                <span class="form-error">{{ error }}</span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-field">
+                                        <label for="{{ form.order.id_for_label }}" class="form-label">{{ form.order.label }}</label>
+                                        {{ form.order }}
+                                        {% if form.order.errors %}
+                                            {% for error in form.order.errors %}
+                                                <span class="form-error">{{ error }}</span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                    {% if formset.can_delete %}
+                                        <div class="form-field">
+                                            <label class="form-checkbox-label">
+                                                {{ form.DELETE }}
+                                                <span>Видалити цей варіант</span>
+                                            </label>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <div class="card">
+                <div class="card-body">
+                    <p class="text-center">Ще немає жодного питання. Додайте перше питання вище.</p>
+                </div>
+            </div>
+        {% endfor %}
+
+        <div class="form-field mt-lg">
+            <button type="submit" class="btn btn-primary">Зберегти зміни</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

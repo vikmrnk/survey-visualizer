@@ -23,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('surveys/', include(('surveys.urls', 'surveys'), namespace='surveys')),
+    path('responses/', include(('responses.urls', 'responses'), namespace='responses')),
     path('analytics/', include(('analytics.urls', 'analytics'), namespace='analytics')),
     path('', RoleRedirectView.as_view(), name='home'),
 ]

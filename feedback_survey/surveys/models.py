@@ -23,6 +23,11 @@ class Survey(models.Model):
         blank=True,
         help_text='Intended audience such as course, faculty, or group',
     )
+    discipline = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='Назва дисципліни або курсу',
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
