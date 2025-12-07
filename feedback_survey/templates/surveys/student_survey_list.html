@@ -2,13 +2,13 @@
 {% block title %}Опитування{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h1>Доступні опитування</h1>
+<h1>Доступні опитування</h1>
 </div>
 
 <section class="page-section">
-    {% if surveys %}
+{% if surveys %}
         <div class="grid grid-responsive">
-            {% for survey in surveys %}
+        {% for survey in surveys %}
                 <article class="card survey-card">
                     <div class="card-header">
                         <h3>{{ survey.title }}</h3>
@@ -31,14 +31,14 @@
                         <a href="{% url 'responses:take-survey' survey_id=survey.pk %}" class="btn btn-primary">Пройти опитування</a>
                     </div>
                 </article>
-            {% endfor %}
+        {% endfor %}
         </div>
-    {% else %}
+{% else %}
         <div class="card">
             <div class="card-body">
                 <p class="text-center">Наразі немає доступних опитувань. Всі активні опитування вже пройдені або ще не розпочались.</p>
             </div>
         </div>
-    {% endif %}
+{% endif %}
 </section>
 {% endblock %}

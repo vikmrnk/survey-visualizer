@@ -1,121 +1,168 @@
-{% extends 'base.html' %}
-{% block title %}Мої опитування{% endblock %}
+{% extends "base.html" %}
+
 {% block content %}
-<div class="page-header">
+<div class="page">
+
+  <!-- Header -->
+  <div class="page-header">
     <div>
-        <h1>Мої опитування</h1>
-        <p class="subtitle">Керуйте створеними опитуваннями, використовуйте фільтри та переходьте до конструктора питань.</p>
+      <h1 class="page-title">Опитування</h1>
+      <p class="page-subtitle">Керуйте всіма активними та закритими опитуваннями</p>
     </div>
-    <div class="page-header-actions">
-        <a href="{% url 'surveys:create' %}" class="btn btn-primary">+ Створити опитування</a>
+    <a href="{% url 'surveys:create' %}"
+       class="btn btn-primary">
+      Створити нове опитування
+    </a>
+  </div>
+
+  <!-- Filters (по статусу через query params) -->
+  <div class="surveys-filters">
+    {% with current_status=request.GET.status %}
+      <a href="{% url 'surveys:manage-list' %}"
+         class="surveys-filter-btn {% if not current_status %}surveys-filter-btn--active{% endif %}">
+        Всі
+      </a>
+      <a href="?status=published"
+         class="surveys-filter-btn {% if current_status == 'published' %}surveys-filter-btn--active{% endif %}">
+        Активні
+      </a>
+      <a href="?status=closed"
+         class="surveys-filter-btn {% if current_status == 'closed' %}surveys-filter-btn--active{% endif %}">
+        Закриті
+      </a>
+      <a href="?status=draft"
+         class="surveys-filter-btn {% if current_status == 'draft' %}surveys-filter-btn--active{% endif %}">
+        Чернетка
+      </a>
+    {% endwith %}
+  </div>
+
+  <!-- Surveys List -->
+  <div class="surveys-grid">
+    {% for item in survey_rows %}
+      <div class="survey-card">
+        <div class="survey-card-header">
+          <div class="survey-card-title-block">
+            <h3 class="survey-card-title">{{ item.survey.title }}</h3>
+            <p class="survey-card-description">
+              {{ item.survey.description|default:"Без опису" }}
+            </p>
+          </div>
+
+          <!-- Dropdown menu (три крапки) -->
+          <div class="survey-card-menu" data-survey-menu>
+            <button type="button" class="survey-card-menu-btn" data-menu-toggle>
+              ⋮
+            </button>
+            <div class="survey-card-menu-dropdown" data-menu-dropdown>
+              <a href="{% url 'surveys:edit' item.survey.pk %}"
+                 class="survey-card-menu-item">
+                Редагувати
+              </a>
+              <a href="{% url 'surveys:question-builder' item.survey.pk %}"
+                 class="survey-card-menu-item">
+                Питання
+              </a>
+              <a href="{% url 'analytics:overview' %}"
+                 class="survey-card-menu-item">
+                Переглянути відповіді
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Meta -->
+        <div class="survey-card-meta">
+          <div class="survey-card-meta-item">
+            <p class="survey-card-meta-label">Статус</p>
+            <p class="survey-card-meta-value">
+              <span class="survey-status
+                           {% if item.survey.status == 'published' %}survey-status--active
+                           {% elif item.survey.status == 'closed' %}survey-status--closed
+                           {% else %}survey-status--draft{% endif %}">
+                {{ item.survey.get_status_display }}
+              </span>
+            </p>
+          </div>
+
+          <div class="survey-card-meta-item">
+            <p class="survey-card-meta-label">Ризик</p>
+            <p class="survey-card-meta-value">
+              <span class="badge badge-{{ item.risk_level|default:'muted' }}">
+                {{ item.risk_label }}
+              </span>
+            </p>
+          </div>
+
+          <div class="survey-card-meta-item">
+            <p class="survey-card-meta-label">Питання</p>
+            <p class="survey-card-meta-value">
+              {{ item.survey.questions.count }}
+            </p>
+          </div>
+
+          <div class="survey-card-meta-item survey-card-meta-item--right">
+            <p class="survey-card-meta-label">Створено</p>
+            <p class="survey-card-meta-value">
+              {{ item.survey.created_at|date:"d.m.Y" }}
+            </p>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-muted-foreground">
+        Поки що немає опитувань. Створіть своє перше опитування.
+      </p>
+    {% endfor %}
+  </div>
+
+  <!-- Пагінація, якщо є -->
+  {% if is_paginated %}
+    <div class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+           class="pagination-link">Попередня</a>
+      {% endif %}
+
+      <span class="pagination-current">
+        Сторінка {{ page_obj.number }} з {{ page_obj.paginator.num_pages }}
+      </span>
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+           class="pagination-link">Наступна</a>
+      {% endif %}
     </div>
+  {% endif %}
+
 </div>
 
-<section class="page-section">
-    <div class="card">
-        <div class="card-header">
-            <h2>Фільтри</h2>
-        </div>
-        <div class="card-body">
-            <form method="get" class="form">
-                <div class="grid grid-2">
-                    <div class="form-field">
-                        <label for="{{ filter_form.status.id_for_label }}" class="form-label">{{ filter_form.status.label }}</label>
-                        {{ filter_form.status }}
-                        {% if filter_form.status.errors %}
-                            {% for error in filter_form.status.errors %}
-                                <span class="form-error">{{ error }}</span>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                    <div class="form-field">
-                        <label for="{{ filter_form.discipline.id_for_label }}" class="form-label">{{ filter_form.discipline.label }}</label>
-                        {{ filter_form.discipline }}
-                        {% if filter_form.discipline.errors %}
-                            {% for error in filter_form.discipline.errors %}
-                                <span class="form-error">{{ error }}</span>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                    <div class="form-field">
-                        <label for="{{ filter_form.start_date.id_for_label }}" class="form-label">{{ filter_form.start_date.label }}</label>
-                        {{ filter_form.start_date }}
-                        {% if filter_form.start_date.errors %}
-                            {% for error in filter_form.start_date.errors %}
-                                <span class="form-error">{{ error }}</span>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                    <div class="form-field">
-                        <label for="{{ filter_form.end_date.id_for_label }}" class="form-label">{{ filter_form.end_date.label }}</label>
-                        {{ filter_form.end_date }}
-                        {% if filter_form.end_date.errors %}
-                            {% for error in filter_form.end_date.errors %}
-                                <span class="form-error">{{ error }}</span>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="flex flex-gap">
-                    <button type="submit" class="btn btn-primary">Фільтрувати</button>
-                    <a href="{% url 'surveys:manage-list' %}" class="btn btn-secondary">Скинути</a>
-                </div>
-            </form>
-        </div>
-    </div>
-</section>
+<script>
+  // простий JS для відкриття/закриття меню з трьома крапками
+  (function() {
+    const menus = document.querySelectorAll('[data-survey-menu]');
 
-<section class="page-section">
-    <div class="table-wrapper">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Назва</th>
-                    <th>Дисципліна</th>
-                    <th>Період</th>
-                    <th>Статус</th>
-                    <th class="text-center">Дії</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for survey in surveys %}
-                    <tr>
-                        <td><strong>{{ survey.title }}</strong></td>
-                        <td>{{ survey.discipline|default:'—' }}</td>
-                        <td>
-                            {% if survey.start_date %}{{ survey.start_date|date:"d.m.Y H:i" }}{% else %}—{% endif %}
-                            {% if survey.start_date or survey.end_date %} – {% endif %}
-                            {% if survey.end_date %}{{ survey.end_date|date:"d.m.Y H:i" }}{% else %}—{% endif %}
-                        </td>
-                        <td>
-                            <span class="question-type-badge">{{ survey.get_status_display }}</span>
-                        </td>
-                        <td class="text-center">
-                            <div class="flex flex-gap" style="justify-content: center;">
-                                <a href="{% url 'surveys:edit' survey.pk %}" class="btn btn-secondary">Редагувати</a>
-                                <a href="{% url 'surveys:question-builder' survey.pk %}" class="btn btn-primary">Питання</a>
-                            </div>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center">Поки що немає створених опитувань.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    
-    {% if is_paginated %}
-        <nav class="flex flex-center flex-gap mt-lg">
-            {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}{% if filters_query %}&{{ filters_query|safe }}{% endif %}" class="btn btn-secondary">« Попередня</a>
-            {% endif %}
-            <span>Сторінка {{ page_obj.number }} з {{ page_obj.paginator.num_pages }}</span>
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if filters_query %}&{{ filters_query|safe }}{% endif %}" class="btn btn-secondary">Наступна »</a>
-            {% endif %}
-        </nav>
-    {% endif %}
-</section>
+    function closeAll() {
+      menus.forEach(menu => {
+        const dropdown = menu.querySelector('[data-menu-dropdown]');
+        if (dropdown) dropdown.classList.remove('is-open');
+      });
+    }
+
+    menus.forEach(menu => {
+      const btn = menu.querySelector('[data-menu-toggle]');
+      const dropdown = menu.querySelector('[data-menu-dropdown]');
+      if (!btn || !dropdown) return;
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.contains('is-open');
+        closeAll();
+        if (!isOpen) dropdown.classList.add('is-open');
+      });
+    });
+
+    document.addEventListener('click', closeAll);
+  })();
+</script>
 {% endblock %}

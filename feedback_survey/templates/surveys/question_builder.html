@@ -1,135 +1,609 @@
-{% extends 'base.html' %}
-{% block title %}Питання «{{ survey.title }}»{% endblock %}
-{% block content %}
-<div class="page-header">
-    <div>
-        <h1>Конструктор питань: {{ survey.title }}</h1>
-        <p class="subtitle">Додайте питання, оберіть тип відповіді та впорядкуйте їх. Для типів «Single» та «Multiple» не забудьте додати варіанти.</p>
-    </div>
-    <div class="page-header-actions">
-        <a href="{% url 'surveys:manage-list' %}" class="btn btn-secondary">← Назад до списку</a>
-    </div>
-</div>
+{% extends "base.html" %}
 
-<section class="page-section">
-    <form method="post" class="form">
-        {% csrf_token %}
+{% block content %}
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="builder-header">
+    <div>
+      <h1 class="page-title">Конструктор опитувань</h1>
+      <p class="page-subtitle">Створюйте та налаштовуйте свої опитування</p>
+    </div>
+    <div class="builder-header-actions">
+      <a href="{% url 'surveys:manage-list' %}"
+         class="btn btn-secondary builder-btn-preview">
+        Назад до списку
+      </a>
+      <button type="submit"
+              form="survey-builder-form"
+              class="btn btn-primary builder-btn-publish">
+        Зберегти зміни
+      </button>
+    </div>
+  </div>
+
+  <form id="survey-builder-form" method="post">
+    {% csrf_token %}
+
+    <div class="builder-layout">
+      <!-- Основна колонка: самі питання -->
+      <section class="builder-main">
+
+        <!-- Заголовок опитування -->
+        <div class="card builder-survey-meta">
+          <div class="builder-survey-meta-inner">
+            <input
+              type="text"
+              name="title"
+              value="{{ survey.title }}"
+              class="builder-survey-title-input"
+              placeholder="Назва опитування"
+            />
+            <textarea
+              name="description"
+              class="builder-survey-description-input"
+              rows="2"
+              placeholder="Короткий опис опитування">{{ survey.description }}</textarea>
+          </div>
+        </div>
+
         {{ question_formset.management_form }}
         
-        <div class="card">
-            <div class="card-header">
-                <h2>Питання</h2>
-            </div>
-            <div class="card-body">
-                {% for form in question_formset.forms %}
-                    <div class="question-card card" style="margin-bottom: var(--spacing-lg);">
-                        <div class="card-body">
-                            {% for hidden in form.hidden_fields %}
-                                {{ hidden }}
-                            {% endfor %}
-                            
-                            <div class="grid grid-2">
-                                <div class="form-field">
-                                    <label for="{{ form.text.id_for_label }}" class="form-label">{{ form.text.label }}</label>
-                                    {{ form.text }}
-                                    {% if form.text.errors %}
-                                        {% for error in form.text.errors %}
-                                            <span class="form-error">{{ error }}</span>
-                                        {% endfor %}
-                                    {% endif %}
-                                </div>
-                                <div class="form-field">
-                                    <label for="{{ form.question_type.id_for_label }}" class="form-label">{{ form.question_type.label }}</label>
-                                    {{ form.question_type }}
-                                    {% if form.question_type.errors %}
-                                        {% for error in form.question_type.errors %}
-                                            <span class="form-error">{{ error }}</span>
-                                        {% endfor %}
-                                    {% endif %}
-                                </div>
-                                <div class="form-field">
-                                    <label for="{{ form.order.id_for_label }}" class="form-label">{{ form.order.label }}</label>
-                                    {{ form.order }}
-                                    {% if form.order.errors %}
-                                        {% for error in form.order.errors %}
-                                            <span class="form-error">{{ error }}</span>
-                                        {% endfor %}
-                                    {% endif %}
-                                </div>
-                                {% if question_formset.can_delete %}
-                                    <div class="form-field">
-                                        <label class="form-checkbox-label">
-                                            {{ form.DELETE }}
-                                            <span>Видалити це питання</span>
-                                        </label>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
+        {% if question_formset.non_form_errors %}
+          <div class="alert alert-error">
+            {% for error in question_formset.non_form_errors %}
+              {{ error }}
+            {% endfor %}
+          </div>
+        {% endif %}
 
-        {% for question, formset in choice_formsets %}
-            <div class="card" style="margin-top: var(--spacing-xl);">
-                <div class="card-header">
-                    <h3>Варіанти для: {{ question.text|truncatechars:80 }}</h3>
+        {% for form in question_formset %}
+          {% with question_id=form.instance.id|default:None %}
+            <div class="card builder-question-card" data-question-index="{{ forloop.counter0 }}" data-question-id="{% if question_id %}{{ question_id }}{% else %}new{% endif %}" {% if form.DELETE.value %}style="display: none;"{% endif %}>
+              {% for hidden in form.hidden_fields %}
+                {{ hidden }}
+              {% endfor %}
+
+              <div class="builder-question-header">
+                <div class="builder-question-left">
+                  <label class="builder-question-label">
+                    Питання {{ forloop.counter }}
+                  </label>
+                  {# поле тексту питання #}
+                  <input
+                    type="text"
+                    name="{{ form.text.html_name }}"
+                    value="{{ form.text.value|default_if_none:'' }}"
+                    class="builder-question-title-input {% if form.text.errors %}builder-input-error{% endif %}"
+                    placeholder="Введіть текст питання"
+                  />
+                  {% if form.text.errors %}
+                    <div class="builder-field-error">
+                      {{ form.text.errors.0 }}
+                    </div>
+                  {% endif %}
                 </div>
-                <div class="card-body">
-                    {% if question.question_type != 'single' and question.question_type != 'multiple' %}
-                        <p><small>Для цього типу питання варіанти не потрібні.</small></p>
-                    {% else %}
-                        {{ formset.management_form }}
-                        {% for form in formset.forms %}
-                            <div class="question-card" style="margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--color-gray-200);">
-                                {% for hidden in form.hidden_fields %}
-                                    {{ hidden }}
-                                {% endfor %}
-                                <div class="grid grid-2">
-                                    <div class="form-field">
-                                        <label for="{{ form.text.id_for_label }}" class="form-label">{{ form.text.label }}</label>
-                                        {{ form.text }}
-                                        {% if form.text.errors %}
-                                            {% for error in form.text.errors %}
-                                                <span class="form-error">{{ error }}</span>
-                                            {% endfor %}
-                                        {% endif %}
-                                    </div>
-                                    <div class="form-field">
-                                        <label for="{{ form.order.id_for_label }}" class="form-label">{{ form.order.label }}</label>
-                                        {{ form.order }}
-                                        {% if form.order.errors %}
-                                            {% for error in form.order.errors %}
-                                                <span class="form-error">{{ error }}</span>
-                                            {% endfor %}
-                                        {% endif %}
-                                    </div>
-                                    {% if formset.can_delete %}
-                                        <div class="form-field">
-                                            <label class="form-checkbox-label">
-                                                {{ form.DELETE }}
-                                                <span>Видалити цей варіант</span>
-                                            </label>
-                                        </div>
-                                    {% endif %}
-                                </div>
+
+                <div class="builder-question-right">
+                  {# поле типу питання #}
+                  <select
+                    name="{{ form.question_type.html_name }}"
+                    class="builder-question-type-select {% if form.question_type.errors %}builder-input-error{% endif %}"
+                    data-type-select>
+                    <option value="text"
+                            {% if form.question_type.value == "text" %}selected{% endif %}>
+                      Короткий текст
+                    </option>
+                    <option value="scale"
+                            {% if form.question_type.value == "scale" %}selected{% endif %}>
+                      Оцінка (шкала)
+                    </option>
+                    <option value="single"
+                            {% if form.question_type.value == "single" %}selected{% endif %}>
+                      Один варіант
+                    </option>
+                    <option value="multiple"
+                            {% if form.question_type.value == "multiple" %}selected{% endif %}>
+                      Кілька варіантів
+                    </option>
+                  </select>
+                  {% if form.question_type.errors %}
+                    <div class="builder-field-error">
+                      {{ form.question_type.errors.0 }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              
+              {% if form.non_field_errors %}
+                <div class="builder-question-errors">
+                  {% for error in form.non_field_errors %}
+                    <div class="builder-field-error">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              <!-- Поле порядку (приховане) -->
+              <div style="display: none;">
+                {{ form.order }}
+              </div>
+
+              <!-- Превʼю відповіді -->
+              <div class="builder-question-preview" data-preview-area {% if form.question_type.value != "scale" and form.question_type.value != "single" and form.question_type.value != "multiple" %}style="display: none;"{% endif %}>
+                {% if form.question_type.value == "scale" %}
+                  <div class="builder-rating-preview">
+                    {% for i in "12345" %}
+                      <button type="button" class="builder-rating-preview-item">
+                        {{ forloop.counter }}
+                      </button>
+                    {% endfor %}
+                  </div>
+                {% elif form.question_type.value == "single" or form.question_type.value == "multiple" %}
+                  <div class="builder-choices-preview" data-choices-preview data-question-id="{% if question_id %}{{ question_id }}{% else %}new-{{ forloop.counter0 }}{% endif %}">
+                    {% if question_id %}
+                      {# Для існуючих питань #}
+                      {% for question, formset in choice_formsets %}
+                        {% if question.id == question_id %}
+                          <div class="builder-choices-wrapper" data-prefix="{{ formset.prefix }}" data-question-id="{{ question.id }}">
+                            <div style="display: none;">
+                              {{ formset.management_form }}
                             </div>
-                        {% endfor %}
+                            <div class="builder-choices-list" data-choices-list>
+                            {% for choice_form in formset.forms %}
+                                <div class="builder-choice-item" {% if choice_form.DELETE.value %}style="display: none;"{% endif %}>
+                                {% for hidden in choice_form.hidden_fields %}
+                                  {{ hidden }}
+                                {% endfor %}
+                                <input
+                                  type="text"
+                                  name="{{ choice_form.text.html_name }}"
+                                  value="{{ choice_form.text.value|default_if_none:'' }}"
+                                    class="builder-choice-input {% if choice_form.text.errors %}builder-input-error{% endif %}"
+                                    placeholder="Текст варіанту"
+                                    {% if choice_form.DELETE.value %}disabled{% endif %}
+                                  />
+                                  {% if choice_form.text.errors %}
+                                    <div class="builder-field-error">
+                                      {{ choice_form.text.errors.0 }}
+                                    </div>
+                                  {% endif %}
+                                  {% if formset.can_delete %}
+                                    <button type="button" class="builder-choice-delete-btn" data-delete-choice>
+                                      Видалити
+                                    </button>
+                                    <div style="display: none;">
+                                      {{ choice_form.DELETE }}
+                                    </div>
+                                  {% endif %}
+                                </div>
+                              {% endfor %}
+                            </div>
+                            <button type="button" class="builder-add-choice-btn" data-add-choice data-prefix="{{ formset.prefix }}">
+                              + Додати варіант
+                            </button>
+                            {# Шаблон пустої форми для клонування - використовуємо структуру з __prefix__ #}
+                            <div style="display: none;" id="empty-form-{{ formset.prefix }}" data-prefix="{{ formset.prefix }}">
+                              <div class="builder-choice-item">
+                                {% with empty_form=formset.empty_form %}
+                                  {% for hidden in empty_form.hidden_fields %}
+                                    {{ hidden }}
+                                  {% endfor %}
+                                  <input
+                                    type="text"
+                                    name="{{ empty_form.text.html_name }}"
+                                    id="{{ empty_form.text.id_for_label }}"
+                                    value=""
+                                    class="builder-choice-input"
+                                    placeholder="Текст варіанту"
+                                    maxlength="255"
+                                  />
+                                  {% if formset.can_delete %}
+                                    <button type="button" class="builder-choice-delete-btn" data-delete-choice>
+                                      Видалити
+                                    </button>
+                                    <div style="display: none;">
+                                      {{ empty_form.DELETE }}
+                                    </div>
+                                  {% endif %}
+                                {% endwith %}
+                              </div>
+                            </div>
+                          </div>
+                        {% endif %}
+                      {% endfor %}
+                    {% else %}
+                      {# Для нових питань - шукаємо тимчасовий formset #}
+                      {% for form_idx, formset_data in new_choice_formsets.items %}
+                        {% if form_idx == forloop.parentloop.counter0 %}
+                          {% with formset=formset_data.1 %}
+                            <div class="builder-choices-wrapper" data-prefix="{{ formset.prefix }}" data-question-id="new-{{ form_idx }}">
+                              <div style="display: none;">
+                                {{ formset.management_form }}
+                              </div>
+                              <div class="builder-choices-list" data-choices-list>
+                                {% for choice_form in formset.forms %}
+                                  <div class="builder-choice-item" {% if choice_form.DELETE.value %}style="display: none;"{% endif %}>
+                                    {% for hidden in choice_form.hidden_fields %}
+                                      {{ hidden }}
+                                    {% endfor %}
+                                    <input
+                                      type="text"
+                                      name="{{ choice_form.text.html_name }}"
+                                      value="{{ choice_form.text.value|default_if_none:'' }}"
+                                      class="builder-choice-input {% if choice_form.text.errors %}builder-input-error{% endif %}"
+                                      placeholder="Текст варіанту"
+                                      {% if choice_form.DELETE.value %}disabled{% endif %}
+                                    />
+                                    {% if choice_form.text.errors %}
+                                      <div class="builder-field-error">
+                                        {{ choice_form.text.errors.0 }}
+                                      </div>
+                                    {% endif %}
+                                    {% if formset.can_delete %}
+                                      <button type="button" class="builder-choice-delete-btn" data-delete-choice>
+                                        Видалити
+                                      </button>
+                                      <div style="display: none;">
+                                        {{ choice_form.DELETE }}
+                                      </div>
+                                    {% endif %}
+                                  </div>
+                                {% endfor %}
+                              </div>
+                              <button type="button" class="builder-add-choice-btn" data-add-choice data-prefix="{{ formset.prefix }}">
+                                + Додати варіант
+                              </button>
+                              {# Шаблон пустої форми для клонування - використовуємо структуру з __prefix__ #}
+                              <div style="display: none;" id="empty-form-{{ formset.prefix }}" data-prefix="{{ formset.prefix }}">
+                                <div class="builder-choice-item">
+                                  {% with empty_form=formset.empty_form %}
+                                    {% for hidden in empty_form.hidden_fields %}
+                                      {{ hidden }}
+                                    {% endfor %}
+                                    <input
+                                      type="text"
+                                      name="{{ empty_form.text.html_name }}"
+                                      id="{{ empty_form.text.id_for_label }}"
+                                      value=""
+                                      class="builder-choice-input"
+                                      placeholder="Текст варіанту"
+                                      maxlength="255"
+                                    />
+                                    {% if formset.can_delete %}
+                                      <button type="button" class="builder-choice-delete-btn" data-delete-choice>
+                                        Видалити
+                                      </button>
+                                      <div style="display: none;">
+                                        {{ empty_form.DELETE }}
+                                      </div>
+                                    {% endif %}
+                                  {% endwith %}
+                                </div>
+                              </div>
+                            </div>
+                          {% endwith %}
+                        {% endif %}
+                      {% empty %}
+                        {# Якщо formset не знайдено, створюємо порожній #}
+                        <div class="builder-choices-wrapper" data-prefix="choices-new-{{ forloop.counter0 }}" data-question-id="new-{{ forloop.counter0 }}">
+                          <input type="hidden" name="choices-new-{{ forloop.counter0 }}-TOTAL_FORMS" value="0">
+                          <input type="hidden" name="choices-new-{{ forloop.counter0 }}-INITIAL_FORMS" value="0">
+                          <div class="builder-choices-list" data-choices-list>
+                          </div>
+                          <button type="button" class="builder-add-choice-btn" data-add-choice data-prefix="choices-new-{{ forloop.counter0 }}" disabled>
+                            + Додати варіант (збережіть питання спочатку)
+                          </button>
+                        </div>
+                      {% endfor %}
                     {% endif %}
-                </div>
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="builder-question-actions">
+                {# DELETE з formset: прихований чекбокс + кнопка, яка його тикає #}
+                {% if form.DELETE %}
+                  <input type="checkbox"
+                         name="{{ form.DELETE.html_name }}"
+                         id="{{ form.DELETE.id_for_label }}"
+                         class="builder-delete-input"
+                         style="display: none;">
+                  <button type="button"
+                          class="builder-question-btn builder-question-btn--danger"
+                          data-delete-button="{{ form.DELETE.id_for_label }}">
+                    Видалити
+                  </button>
+                {% endif %}
+              </div>
             </div>
+          {% endwith %}
         {% empty %}
-            <div class="card">
-                <div class="card-body">
-                    <p class="text-center">Ще немає жодного питання. Додайте перше питання вище.</p>
-                </div>
-            </div>
+          <p class="text-muted-foreground">Поки немає питань. Додайте перше зліва.</p>
         {% endfor %}
 
-        <div class="form-field mt-lg">
-            <button type="submit" class="btn btn-primary">Зберегти зміни</button>
-        </div>
-    </form>
-</section>
+        <!-- Додати питання -->
+        <button type="button"
+                id="builder-add-question"
+                class="builder-add-question-btn">
+          Додати питання
+        </button>
+      </section>
+    </div>
+  </form>
+</div>
+
+<script>
+  (function() {
+    const addQuestionBtn = document.getElementById('builder-add-question');
+    const totalFormsInput = document.querySelector('[name$="-TOTAL_FORMS"]');
+
+    function getTotalForms() {
+      return parseInt(totalFormsInput.value, 10) || 0;
+    }
+
+    function setTotalForms(val) {
+      totalFormsInput.value = String(val);
+    }
+
+    function cloneLastForm(customType) {
+      const cards = document.querySelectorAll('.builder-question-card');
+      if (!cards.length) return;
+      const lastCard = cards[cards.length - 1];
+      const newIndex = getTotalForms();
+
+      const newCard = lastCard.cloneNode(true);
+      newCard.dataset.questionIndex = newIndex;
+
+      // оновлюємо текст "Питання N"
+      const label = newCard.querySelector('.builder-question-label');
+      if (label) {
+        label.textContent = 'Питання ' + (newIndex + 1);
+      }
+
+      // Оновлюємо імена полів
+      const inputs = newCard.querySelectorAll('input, textarea, select');
+      inputs.forEach((el) => {
+        if (el.name) {
+          el.name = el.name.replace(/-\d+-/, '-' + newIndex + '-');
+        }
+        if (el.id) {
+          el.id = el.id.replace(/-\d+-/, '-' + newIndex + '-');
+        }
+        // Очищаємо значення (крім DELETE та order)
+        if (el.name && el.name.includes('-DELETE')) {
+          el.checked = false;
+          return;
+        }
+        // Встановлюємо значення order на індекс форми
+        if (el.name && el.name.includes('-order')) {
+          el.value = newIndex;
+          return;
+        }
+        if (el.tagName === 'INPUT' && el.type !== 'hidden') {
+          el.value = '';
+        }
+        if (el.tagName === 'TEXTAREA') {
+          el.value = '';
+        }
+      });
+
+      // якщо передали тип – виставляємо його
+      if (customType) {
+        const typeSelect = newCard.querySelector('[data-type-select]');
+        if (typeSelect) {
+          typeSelect.value = customType;
+        }
+      }
+
+      // Налаштовуємо preview відповідно до типу
+      const previewArea = newCard.querySelector('[data-preview-area]');
+      const typeSelect = newCard.querySelector('[data-type-select]');
+      if (previewArea && typeSelect) {
+        const questionType = typeSelect.value;
+        if (questionType === 'text') {
+          previewArea.style.display = 'none';
+          previewArea.innerHTML = '';
+        } else if (questionType === 'scale') {
+          previewArea.style.display = '';
+          previewArea.innerHTML = `
+            <div class="builder-rating-preview">
+              <button type="button" class="builder-rating-preview-item">1</button>
+              <button type="button" class="builder-rating-preview-item">2</button>
+              <button type="button" class="builder-rating-preview-item">3</button>
+              <button type="button" class="builder-rating-preview-item">4</button>
+              <button type="button" class="builder-rating-preview-item">5</button>
+            </div>
+          `;
+        } else if (questionType === 'single' || questionType === 'multiple') {
+          previewArea.style.display = '';
+          // Структура для варіантів вже є в клонованій формі
+        }
+      }
+
+      // Скидаємо стиль opacity якщо був видалений
+      newCard.style.opacity = '';
+
+      // додаємо перед кнопкою "Додати питання"
+      addQuestionBtn.before(newCard);
+
+      setTotalForms(newIndex + 1);
+    }
+
+    // Кнопка "Додати питання" – просто клон останнього (тип text)
+    addQuestionBtn.addEventListener('click', () => {
+      cloneLastForm('text');
+    });
+
+    // Видалення – проставляємо DELETE = true
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-delete-button]');
+      if (!btn) return;
+      e.preventDefault();
+      const inputId = btn.getAttribute('data-delete-button');
+      const checkbox = document.getElementById(inputId);
+      if (checkbox) {
+        checkbox.checked = true;
+        const card = btn.closest('.builder-question-card');
+        if (card) {
+          // Приховуємо картку, але залишаємо в DOM для обробки при збереженні
+          card.style.display = 'none';
+        }
+      }
+    });
+
+    // Переключення типу → показуємо превʼю відповідно до типу
+    document.addEventListener('change', (e) => {
+      const select = e.target.closest('[data-type-select]');
+      if (!select) return;
+      const card = select.closest('.builder-question-card');
+      const previewArea = card.querySelector('[data-preview-area]');
+      if (!previewArea) return;
+
+      if (select.value === 'scale') {
+        previewArea.style.display = '';
+        previewArea.innerHTML = `
+          <div class="builder-rating-preview">
+            <button type="button" class="builder-rating-preview-item">1</button>
+            <button type="button" class="builder-rating-preview-item">2</button>
+            <button type="button" class="builder-rating-preview-item">3</button>
+            <button type="button" class="builder-rating-preview-item">4</button>
+            <button type="button" class="builder-rating-preview-item">5</button>
+          </div>
+        `;
+      } else if (select.value === 'single' || select.value === 'multiple') {
+        previewArea.style.display = '';
+        // Показуємо форму для додавання варіантів
+        const existingChoices = previewArea.querySelector('[data-choices-preview]');
+        
+        if (!existingChoices) {
+          // Створюємо нову структуру для варіантів (тільки для нових питань)
+          const questionId = card.dataset.questionId;
+          const questionIndex = card.dataset.questionIndex;
+          
+          // Для нових питань створюємо порожню структуру
+          // (після збереження питання formset буде створений автоматично)
+              previewArea.innerHTML = `
+            <div class="builder-choices-preview" data-choices-preview data-question-id="${questionId}">
+              <div class="builder-choices-list" data-choices-list data-prefix="new-${questionIndex}">
+                {# Порожній список - варіанти можна додати після збереження питання #}
+                    </div>
+              <button type="button" class="builder-add-choice-btn" data-add-choice data-prefix="new-${questionIndex}" disabled>
+                + Додати варіант (збережіть питання спочатку)
+                  </button>
+                </div>
+              `;
+        } else {
+          // Якщо вже є варіанти, просто показуємо їх
+          existingChoices.style.display = '';
+        }
+      } else {
+        // Для text - приховуємо весь preview
+        previewArea.style.display = 'none';
+          previewArea.innerHTML = '';
+      }
+    });
+
+    // Додавання варіанту (використовуємо empty_form)
+    document.addEventListener('click', (e) => {
+      if (e.target.matches('[data-add-choice]')) {
+        e.preventDefault();
+        const btn = e.target;
+        const prefix = btn.dataset.prefix;
+        if (!prefix) return;
+        
+        const choicesWrapper = btn.closest('.builder-choices-wrapper');
+        if (!choicesWrapper) return;
+        
+        const choicesList = choicesWrapper.querySelector('.builder-choices-list');
+        if (!choicesList) return;
+        
+        // Знаходимо management form
+        const totalFormsInput = choicesWrapper.querySelector(`input[name="${prefix}-TOTAL_FORMS"]`);
+        if (!totalFormsInput) return;
+        
+        // Читаємо поточну кількість форм
+        const totalForms = parseInt(totalFormsInput.value, 10) || 0;
+        
+        // Знаходимо шаблон empty_form
+        const emptyFormTemplate = document.getElementById(`empty-form-${prefix}`);
+        if (!emptyFormTemplate) {
+          console.error('Empty form template not found for prefix:', prefix);
+          return;
+        }
+        
+        // Клонуємо шаблон
+        const emptyFormItem = emptyFormTemplate.querySelector('.builder-choice-item');
+        if (!emptyFormItem) {
+          console.error('Empty form item not found in template');
+          return;
+        }
+        
+        const newChoice = emptyFormItem.cloneNode(true);
+        
+        // Оновлюємо індекси в name/id, замінюючи __prefix__ на totalForms
+        const inputs = newChoice.querySelectorAll('input, select, textarea, label');
+        inputs.forEach((input) => {
+          if (input.name) {
+            input.name = input.name.replace(/__prefix__/g, totalForms);
+          }
+          if (input.id) {
+            input.id = input.id.replace(/__prefix__/g, totalForms);
+          }
+          if (input.htmlFor) {
+            input.htmlFor = input.htmlFor.replace(/__prefix__/g, totalForms);
+          }
+          // Очищаємо значення для нових полів (крім hidden та checkbox)
+          if (input.type !== 'hidden' && input.type !== 'checkbox') {
+            input.value = '';
+          }
+          if (input.type === 'checkbox' && input.name && input.name.includes('-DELETE')) {
+            input.checked = false;
+          }
+          // Очищаємо id для нових варіантів
+          if (input.name && input.name.includes('-id')) {
+            input.value = '';
+          }
+          // order не потрібно встановлювати вручну - BaseChoiceFormSet.save() сам проставить його
+        });
+        
+        // Додаємо новий варіант
+        choicesList.appendChild(newChoice);
+        
+        // Збільшуємо TOTAL_FORMS
+        totalFormsInput.value = totalForms + 1;
+      }
+      
+      // Видалення варіанту
+      if (e.target.matches('[data-delete-choice]')) {
+        e.preventDefault();
+        const choiceItem = e.target.closest('.builder-choice-item');
+        if (choiceItem) {
+          // Знаходимо checkbox DELETE
+          const deleteCheckbox = choiceItem.querySelector('input[name$="-DELETE"]');
+          if (deleteCheckbox) {
+            deleteCheckbox.checked = true;
+            // Приховуємо варіант, але залишаємо в DOM для обробки при збереженні
+            choiceItem.style.display = 'none';
+            // Також робимо поле тексту неактивним
+            const textInput = choiceItem.querySelector('input[type="text"]');
+            if (textInput) {
+              textInput.disabled = true;
+            }
+          } else {
+            // Якщо немає checkbox (новий варіант, який ще не збережений), просто видаляємо
+            const choicesWrapper = choiceItem.closest('.builder-choices-wrapper');
+            if (choicesWrapper) {
+              const totalFormsInput = choicesWrapper.querySelector('input[name$="-TOTAL_FORMS"]');
+              if (totalFormsInput) {
+                const totalForms = parseInt(totalFormsInput.value, 10) || 0;
+                totalFormsInput.value = Math.max(0, totalForms - 1);
+              }
+            }
+            choiceItem.remove();
+          }
+        }
+      }
+    });
+  })();
+</script>
 {% endblock %}

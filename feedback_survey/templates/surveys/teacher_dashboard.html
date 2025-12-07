@@ -1,73 +1,145 @@
-{% extends 'base.html' %}
-{% block title %}Панель викладача{% endblock %}
+{% extends "base.html" %}
+
 {% block content %}
-<div class="page-header">
-    <h1>Панель керування</h1>
+<div class="page">
+
+  <div class="dashboard-header">
+    <div>
+      <h1 class="page-title">Панель управління</h1>
+      <p class="page-subtitle">Ласкаво просимо! Ось огляд ваших опитувань.</p>
+    </div>
+    <a href="{% url 'surveys:create' %}"
+       class="btn btn-primary dashboard-new-survey-btn">
+      Нове опитування
+    </a>
+  </div>
+
+  <div class="metrics-grid">
+    <div class="metric-card metric-card--blue">
+      <p class="metric-label">Активні опитування</p>
+      <p class="metric-value">{{ active_surveys }}</p>
+    </div>
+
+    <div class="metric-card metric-card--green">
+      <p class="metric-label">Всього відповідей</p>
+      <p class="metric-value">{{ total_responses }}</p>
+    </div>
+
+    <div class="metric-card metric-card--purple">
+      <p class="metric-label">Рівень завершення</p>
+      <p class="metric-value">{{ completion_rate }}</p>
+    </div>
+
+    <div class="metric-card metric-card--orange">
+      <p class="metric-label">Середня оцінка</p>
+      <p class="metric-value">{{ avg_rating }}</p>
+    </div>
+  </div>
+
+  <div class="charts-grid-dashboard">
+    <div class="card chart-card chart-card--wide">
+      <h2 class="card-title">Тренд відповідей за тиждень</h2>
+      <div style="position: relative; height: 300px;">
+        <canvas id="responsesTrendChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card chart-card">
+      <h2 class="card-title">Задоволення</h2>
+      <div style="position: relative; height: 300px;">
+        <canvas id="satisfactionPieChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card recent-surveys-card">
+    <h2 class="card-title">Недавні опитування</h2>
+    <div class="recent-surveys-list">
+      {% for survey in recent_surveys %}
+      <a href="{% url 'surveys:edit' survey.id %}"
+         class="recent-survey-item">
+        <div>
+          <p class="recent-survey-title">{{ survey.title }}</p>
+          <p class="recent-survey-subtitle">
+            {{ survey.responses_count|default:survey.response_sessions.count }} відповідей
+          </p>
+        </div>
+        <span class="status-badge
+                     {% if survey.status == 'published' %}status-badge--active
+                     {% elif survey.status == 'closed' %}status-badge--closed
+                     {% else %}status-badge--draft{% endif %}">
+          {{ survey.get_status_display }}
+        </span>
+      </a>
+      {% empty %}
+      <div class="recent-survey-item">
+        <div>
+          <p class="recent-survey-title">Зворотний зв'язок з курсу Q4</p>
+          <p class="recent-survey-subtitle">342 відповідей</p>
+        </div>
+        <span class="status-badge status-badge--active">Активне</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
 </div>
 
-<section class="page-section">
-    <div class="grid grid-3">
-        <div class="card">
-            <div class="card-header">
-                <h3>Всього опитувань</h3>
-            </div>
-            <div class="card-body">
-                <p style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--color-primary); margin: 0;">{{ survey_count }}</p>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <h3>Активні</h3>
-            </div>
-            <div class="card-body">
-                <p style="font-size: var(--font-size-3xl); font-weight: 700; color: var(--color-success); margin: 0;">{{ active_count }}</p>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <h3>Швидкі дії</h3>
-            </div>
-            <div class="card-body">
-                <div class="flex" style="flex-direction: column; gap: var(--spacing-sm);">
-                    <a href="{% url 'surveys:create' %}" class="btn btn-primary">Створити опитування</a>
-                    <a href="{% url 'surveys:manage-list' %}" class="btn btn-secondary">Мої опитування</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const dashboardData = {{ dashboard_trend_json|safe }};
+  const surveyStats = {{ satisfaction_stats_json|safe }};
 
-<section class="page-section">
-    <div class="card">
-        <div class="card-header">
-            <h2>Останні зміни</h2>
-        </div>
-        <div class="card-body">
-            <div class="table-wrapper">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Назва</th>
-                            <th>Статус</th>
-                            <th>Оновлено</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for survey in latest_surveys %}
-                            <tr>
-                                <td><strong>{{ survey.title }}</strong></td>
-                                <td><span class="question-type-badge">{{ survey.get_status_display }}</span></td>
-                                <td>{{ survey.updated_at|date:"d.m.Y H:i" }}</td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="3" class="text-center">Поки немає створених опитувань.</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</section>
+  const ctxTrend = document.getElementById('responsesTrendChart').getContext('2d');
+  new Chart(ctxTrend, {
+    type: 'line',
+    data: {
+      labels: dashboardData.map(d => d.name),
+      datasets: [
+        {
+          label: 'Відповіді',
+          data: dashboardData.map(d => d.responses),
+          borderColor: '#4C7EFF',
+          backgroundColor: 'rgba(76, 126, 255, 0.1)',
+          tension: 0.4,
+          borderWidth: 2,
+        },
+        {
+          label: 'Завершено',
+          data: dashboardData.map(d => d.completed),
+          borderColor: '#8BA8FF',
+          backgroundColor: 'rgba(139, 168, 255, 0.1)',
+          tension: 0.4,
+          borderWidth: 2,
+        }
+      ]
+    },
+    options: {
+      scales: {
+        x: { ticks: { color: '#6b7280' } },
+        y: { ticks: { color: '#6b7280' } }
+      },
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+
+  const ctxPie = document.getElementById('satisfactionPieChart').getContext('2d');
+  new Chart(ctxPie, {
+    type: 'pie',
+    data: {
+      labels: surveyStats.map(s => s.label),
+      datasets: [{
+        data: surveyStats.map(s => s.value),
+        backgroundColor: surveyStats.map(s => s.color),
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+</script>
 {% endblock %}

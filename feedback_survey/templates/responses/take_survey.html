@@ -1,124 +1,230 @@
-{% extends 'base.html' %}
-{% block title %}Проходження опитування: {{ survey.title }}{% endblock %}
+{% extends "base.html" %}
+
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1>{{ survey.title }}</h1>
-        {% if survey.description %}
-            <p class="subtitle">{{ survey.description }}</p>
-        {% endif %}
-        {% if survey.discipline %}
-            <p><small><strong>Дисципліна:</strong> {{ survey.discipline }}</small></p>
-        {% endif %}
+<div class="survey-page">
+
+  <div class="survey-page-inner">
+    <!-- HEADER -->
+    <div class="survey-header">
+      <div class="survey-header-logo">
+        <span>О</span>
+      </div>
+      <div>
+        <span class="survey-header-badge">
+          {{ survey.discipline|default:"Опитування проміжного зворотного зв'язку" }}
+        </span>
+        <h1 class="survey-title">{{ survey.title }}</h1>
+        <p class="survey-subtitle">
+          {{ survey.description|default:"Ваш зворотний зв'язок цінний і допоможе нам покращити якість курсу." }}
+        </p>
+      </div>
     </div>
-    <div class="page-header-actions">
-        <a href="{% url 'surveys:student-survey-list' %}" class="btn btn-secondary">← Назад до списку</a>
+
+    <!-- ПРОГРЕС -->
+    <div class="survey-progress">
+      <div class="survey-progress-header">
+        <span class="survey-progress-label">Прогрес</span>
+        <span class="survey-progress-percent" id="survey-progress-percent">0%</span>
+      </div>
+      <div class="survey-progress-bar">
+        <div class="survey-progress-bar-inner" id="survey-progress-bar-inner"></div>
+      </div>
     </div>
+
+    <!-- ФОРМА -->
+    <form method="post" class="survey-form">
+      {% csrf_token %}
+
+      <div class="survey-question-card">
+        {% for question in questions %}
+          <div class="survey-question"
+               data-question-index="{{ forloop.counter0 }}"
+               {% if not forloop.first %}hidden{% endif %}>
+
+            <div class="survey-question-header">
+              <p class="survey-question-counter">
+                Питання {{ forloop.counter }} з {{ questions|length }}
+              </p>
+              <h2 class="survey-question-title">
+                {{ question.text }}
+              </h2>
+              {% if question.help_text %}
+                <p class="survey-question-help">{{ question.help_text }}</p>
+              {% endif %}
+            </div>
+
+            <div class="survey-answer-area">
+              {# SINGLE CHOICE #}
+              {% if question.question_type == "single" %}
+                <div class="survey-options-list">
+                  {% for choice in question.choices.all %}
+                    <label class="survey-option-button">
+                      <input type="radio"
+                             name="question_{{ question.id }}"
+                             value="{{ choice.id }}"
+                             class="survey-option-input">
+                      <span class="survey-option-text">{{ choice.text }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+
+              {# MULTIPLE CHOICE #}
+              {% elif question.question_type == "multiple" %}
+                <div class="survey-options-list">
+                  {% for choice in question.choices.all %}
+                    <label class="survey-multi-option">
+                      <input type="checkbox"
+                             name="question_{{ question.id }}"
+                             value="{{ choice.id }}"
+                             class="survey-multi-input">
+                      <span class="survey-multi-text">{{ choice.text }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+
+              {# SCALE (1–5) #}
+              {% elif question.question_type == "scale" %}
+                <div class="survey-rating-row">
+                  {% for i in "12345" %}
+                    <label class="survey-rating-item">
+                      <input type="radio"
+                             name="question_{{ question.id }}"
+                             value="{{ forloop.counter }}"
+                             class="survey-rating-input">
+                      <span>{{ forloop.counter }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+
+              {# OPEN TEXT #}
+              {% else %}
+                <textarea
+                    name="question_{{ question.id }}"
+                    class="survey-textarea"
+                    placeholder="Поділіться своїми думками..."></textarea>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+
+        <!-- НАВІГАЦІЯ -->
+        <div class="survey-nav">
+          <button type="button"
+                  id="survey-btn-prev"
+                  class="survey-nav-btn survey-nav-btn--secondary"
+                  disabled>
+            Попередня
+          </button>
+
+          <button type="submit"
+                  id="survey-btn-submit"
+                  class="survey-nav-btn survey-nav-btn--primary"
+                  hidden>
+            Подати опитування
+          </button>
+
+          <button type="button"
+                  id="survey-btn-next"
+                  class="survey-nav-btn survey-nav-btn--primary">
+            Далі
+          </button>
+        </div>
+      </div>
+
+      <!-- СПИСОК ПИТАНЬ / ПРОГРЕС КНОПОК -->
+      <div class="card survey-steps-card">
+        <h3 class="card-title">Прогрес опитування</h3>
+        <div class="survey-steps-grid" id="survey-steps-grid">
+          {% for question in questions %}
+            <button type="button"
+                    class="survey-step"
+                    data-step-index="{{ forloop.counter0 }}">
+              {{ forloop.counter }}
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+    </form>
+  </div>
 </div>
 
-<section class="page-section">
-    <form method="post" class="form">
-        {% csrf_token %}
-        
-        {% if questions %}
-            <div class="survey-progress">
-                <div class="survey-progress-text">Питання: {{ questions|length }}</div>
-            </div>
-        {% endif %}
-        
-        {% for question in questions %}
-            <div class="question-card card">
-                <div class="card-body">
-                    <div class="question-header">
-                        <span class="question-number">{{ forloop.counter }}</span>
-                        <strong>{{ question.text }}</strong>
-                        <span class="question-type-badge">{{ question.get_question_type_display }}</span>
-                    </div>
-                    
-                    <div class="question-options">
-                        {% if question.question_type == 'single' %}
-                            {% for choice in question.choices.all %}
-                                <label class="form-radio-label">
-                                    <input 
-                                        type="radio" 
-                                        name="question_{{ question.pk }}" 
-                                        value="{{ choice.pk }}" 
-                                        id="choice_{{ choice.pk }}"
-                                        class="form-radio"
-                                        required
-                                    />
-                                    <span>{{ choice.text }}</span>
-                                </label>
-                            {% empty %}
-                                <p><em>Немає варіантів відповіді для цього питання.</em></p>
-                            {% endfor %}
-                        
-                        {% elif question.question_type == 'multiple' %}
-                            <p><small>Оберіть один або кілька варіантів:</small></p>
-                            {% for choice in question.choices.all %}
-                                <label class="form-checkbox-label">
-                                    <input 
-                                        type="checkbox" 
-                                        name="question_{{ question.pk }}" 
-                                        value="{{ choice.pk }}"
-                                        id="choice_{{ choice.pk }}"
-                                        class="form-checkbox"
-                                    />
-                                    <span>{{ choice.text }}</span>
-                                </label>
-                            {% empty %}
-                                <p><em>Немає варіантів відповіді для цього питання.</em></p>
-                            {% endfor %}
-                        
-                        {% elif question.question_type == 'scale' %}
-                            <label class="form-label">
-                                Оцінка (1-10):
-                                <div style="display: flex; align-items: center; gap: var(--spacing-md); margin-top: var(--spacing-sm);">
-                                    <input 
-                                        type="range" 
-                                        name="question_{{ question.pk }}" 
-                                        id="scale_{{ question.pk }}"
-                                        min="1" 
-                                        max="10" 
-                                        value="5" 
-                                        required
-                                        oninput="document.getElementById('output_{{ question.pk }}').textContent = this.value"
-                                        style="flex: 1;"
-                                    />
-                                    <output id="output_{{ question.pk }}" style="font-weight: 600; min-width: 30px; text-align: center;">5</output>
-                                </div>
-                            </label>
-                        
-                        {% elif question.question_type == 'text' %}
-                            <label for="text_{{ question.pk }}" class="form-label">Ваша відповідь:</label>
-                            <textarea 
-                                name="question_{{ question.pk }}" 
-                                id="text_{{ question.pk }}"
-                                rows="4" 
-                                class="form-textarea"
-                                required
-                                placeholder="Введіть вашу відповідь..."
-                            ></textarea>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        {% empty %}
-            <div class="card">
-                <div class="card-body">
-                    <p class="text-center">У цьому опитуванні поки немає питань.</p>
-                </div>
-            </div>
-        {% endfor %}
-        
-        {% if questions %}
-            <div class="form-field mt-xl">
-                <div class="flex flex-gap">
-                    <button type="submit" class="btn btn-primary">Відправити відповіді</button>
-                    <a href="{% url 'surveys:student-survey-list' %}" class="btn btn-secondary">Скасувати</a>
-                </div>
-            </div>
-        {% endif %}
-    </form>
-</section>
+<script>
+  (function() {
+    const questions = Array.from(document.querySelectorAll('.survey-question'));
+    if (!questions.length) return;
+
+    let currentIndex = 0;
+
+    const prevBtn = document.getElementById('survey-btn-prev');
+    const nextBtn = document.getElementById('survey-btn-next');
+    const submitBtn = document.getElementById('survey-btn-submit');
+    const steps = Array.from(document.querySelectorAll('.survey-step'));
+    const progressBar = document.getElementById('survey-progress-bar-inner');
+    const progressPercent = document.getElementById('survey-progress-percent');
+
+    function isQuestionAnswered(idx) {
+      const block = questions[idx];
+      const inputs = block.querySelectorAll('input, textarea');
+      for (const input of inputs) {
+        if (input.type === 'radio' || input.type === 'checkbox') {
+          if (input.checked) return true;
+        } else {
+          if (input.value.trim() !== '') return true;
+        }
+      }
+      return false;
+    }
+
+    function updateProgress() {
+      const answered = questions.filter((_, i) => isQuestionAnswered(i)).length;
+      const percent = Math.round((answered / questions.length) * 100);
+      progressBar.style.width = percent + '%';
+      progressPercent.textContent = percent + '%';
+
+      steps.forEach((btn, i) => {
+        btn.classList.toggle('survey-step--current', i === currentIndex);
+        btn.classList.toggle('survey-step--answered', isQuestionAnswered(i));
+      });
+    }
+
+    function showQuestion(idx) {
+      questions.forEach((q, i) => {
+        q.hidden = i !== idx;
+      });
+      currentIndex = idx;
+
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.hidden = currentIndex === questions.length - 1;
+      submitBtn.hidden = currentIndex !== questions.length - 1;
+
+      updateProgress();
+    }
+
+    nextBtn.addEventListener('click', function() {
+      if (currentIndex < questions.length - 1) {
+        showQuestion(currentIndex + 1);
+      }
+    });
+
+    prevBtn.addEventListener('click', function() {
+      if (currentIndex > 0) {
+        showQuestion(currentIndex - 1);
+      }
+    });
+
+    steps.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.stepIndex, 10);
+        showQuestion(idx);
+      });
+    });
+
+    // оновлюємо прогрес при зміні відповідей
+    document.querySelector('.survey-form').addEventListener('change', updateProgress);
+    document.querySelector('.survey-form').addEventListener('input', updateProgress);
+
+    // стартовий стан
+    showQuestion(0);
+  })();
+</script>
 {% endblock %}

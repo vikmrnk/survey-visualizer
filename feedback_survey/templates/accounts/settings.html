@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page page--narrow">
+  <div class="page-header">
+    <h1 class="page-title">Налаштування</h1>
+    <p class="page-subtitle">Керуйте своїм профілем та налаштуваннями</p>
+  </div>
+
+  <form method="post" class="settings-form">
+    {% csrf_token %}
+
+    <div class="card settings-section">
+      <h2 class="settings-section-title">
+        Налаштування профілю
+      </h2>
+      <div class="settings-section-body">
+        <div class="form-field">
+          <label class="form-label">Повне ім'я</label>
+          <input
+            type="text"
+            name="full_name"
+            value="{{ user.get_full_name|default:user.username }}"
+            class="form-input"
+          />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Адреса електронної пошти</label>
+          <input
+            type="email"
+            name="email"
+            value="{{ user.email }}"
+            class="form-input"
+          />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Кафедра</label>
+          <input
+            type="text"
+            name="department"
+            value="{{ user.faculty|default_if_none:'' }}"
+            class="form-input"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="card settings-section">
+      <h2 class="settings-section-title">
+        Сповіщення
+      </h2>
+      <div class="settings-section-body settings-checkbox-list">
+        <label class="settings-checkbox">
+          <input type="checkbox" name="notify_new_responses" {% if notify_new_responses %}checked{% endif %}>
+          <span>Поштові сповіщення про нові відповіді</span>
+        </label>
+        <label class="settings-checkbox">
+          <input type="checkbox" name="notify_daily_summary" {% if notify_daily_summary %}checked{% endif %}>
+          <span>Щоденне резюме активності опитування</span>
+        </label>
+        <label class="settings-checkbox">
+          <input type="checkbox" name="notify_low_response" {% if notify_low_response %}checked{% endif %}>
+          <span>Сповіщення про низький рівень відповідей</span>
+        </label>
+        <label class="settings-checkbox">
+          <input type="checkbox" name="notify_marketing" {% if notify_marketing %}checked{% endif %}>
+          <span>Маркетингові оновлення</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="card settings-section">
+      <h2 class="settings-section-title">
+        Конфіденційність і безпека
+      </h2>
+      <div class="settings-section-body">
+        <div class="form-field">
+          <label class="form-label">Видимість опитування</label>
+          <select name="visibility" class="form-input">
+            <option value="private" {% if visibility == "private" %}selected{% endif %}>Тільки я</option>
+            <option value="department" {% if visibility == "department" %}selected{% endif %}>Члени кафедри</option>
+            <option value="university" {% if visibility == "university" %}selected{% endif %}>Всі в університеті</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Збереження даних</label>
+          <select name="retention" class="form-input">
+            <option value="1y" {% if retention == "1y" %}selected{% endif %}>1 рік</option>
+            <option value="2y" {% if retention == "2y" %}selected{% endif %}>2 роки</option>
+            <option value="unlimited" {% if retention == "unlimited" %}selected{% endif %}>Без обмежень</option>
+          </select>
+        </div>
+        <button type="button" class="settings-change-password-btn">
+          Змінити пароль
+        </button>
+      </div>
+    </div>
+
+    <button type="submit" class="settings-save-btn">
+      Зберегти зміни
+    </button>
+  </form>
+</div>
+{% endblock %}

@@ -1,15 +1,121 @@
-{% extends 'base.html' %}
-{% block title %}Аналітика{% endblock %}
+{% extends "base.html" %}
+
 {% block content %}
-<div class="page-header">
-    <h1>Аналітика опитувань</h1>
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Аналітика</h1>
+    <p class="page-subtitle">Детальна інформація про відповіді на опитування</p>
+  </div>
+
+  <div class="metrics-grid">
+    <div class="metric-card metric-card--blue">
+      <p class="metric-label">Всього відповідей</p>
+      <p class="metric-value">{{ total_responses }}</p>
+    </div>
+    <div class="metric-card metric-card--green">
+      <p class="metric-label">Середній час заповнення</p>
+      <p class="metric-value">{{ avg_fill_time }}</p>
+    </div>
+    <div class="metric-card metric-card--purple">
+      <p class="metric-label">Рівень відповідей</p>
+      <p class="metric-value">{{ response_rate }}</p>
+    </div>
+    <div class="metric-card metric-card--orange">
+      <p class="metric-label">Оцінка залучення</p>
+      <p class="metric-value">{{ engagement_score }}</p>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="card chart-card">
+      <h2 class="card-title">Відповіді за часом</h2>
+      <div style="position: relative; height: 300px;">
+        <canvas id="responsesByDayChart"></canvas>
+      </div>
+    </div>
+    <div class="card chart-card">
+      <h2 class="card-title">Розподіл оцінок</h2>
+      <div style="position: relative; height: 300px;">
+        <canvas id="ratingDistributionChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card question-analysis">
+    <h2 class="card-title">Аналіз питань</h2>
+    <div class="question-analysis-list">
+      {% for item in question_insights %}
+      <div class="question-analysis-item">
+        <div class="question-analysis-header">
+          <p class="question-text">{{ item.question }}</p>
+          <p class="question-responses">{{ item.responses }} відповідей</p>
+        </div>
+        <div class="question-analysis-bar">
+          <div class="question-analysis-bar-inner"
+               style="width: {% widthratio item.avg 5 100 %}%"></div>
+          <span class="question-analysis-score">
+            {{ item.avg }}/5
+          </span>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-muted-foreground">
+        Поки немає даних для аналізу. Створіть опитування з питаннями типу "Шкала" і зберіть відповіді.
+      </p>
+      {% endfor %}
+    </div>
+  </div>
 </div>
 
-<section class="page-section">
-    <div class="card">
-        <div class="card-body">
-            <p>Функціонал аналітики буде додано пізніше.</p>
-        </div>
-    </div>
-</section>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const responsesByDay = {{ responses_by_day_json|safe }};
+  const ratingDistribution = {{ rating_distribution_json|safe }};
+
+  const ctxResponses = document.getElementById('responsesByDayChart').getContext('2d');
+  new Chart(ctxResponses, {
+    type: 'bar',
+    data: {
+      labels: responsesByDay.map(d => d.day),
+      datasets: [{
+        label: 'Відповіді',
+        data: responsesByDay.map(d => d.count),
+        borderRadius: 8,
+        backgroundColor: '#3b82f6',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { color: '#6b7280' } },
+        y: { ticks: { color: '#6b7280' } },
+      }
+    }
+  });
+
+  const ctxRating = document.getElementById('ratingDistributionChart').getContext('2d');
+  new Chart(ctxRating, {
+    type: 'bar',
+    data: {
+      labels: ratingDistribution.map(d => d.rating),
+      datasets: [{
+        label: 'Кількість',
+        data: ratingDistribution.map(d => d.count),
+        borderRadius: 8,
+        backgroundColor: '#10b981',
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { color: '#6b7280' } },
+        y: { ticks: { color: '#6b7280' } },
+      }
+    }
+  });
+</script>
 {% endblock %}
+

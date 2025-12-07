@@ -1,0 +1,12 @@
+{
+  "num_surveys": 1,
+  "columns": [
+    "survey_id",
+    "satisfaction_index",
+    "num_responses",
+    "avg_scale_q1",
+    "std_scale_q1",
+    "avg_scale_overall",
+    "std_scale_overall"
+  ]
+}
